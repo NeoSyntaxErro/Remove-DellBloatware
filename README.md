@@ -70,18 +70,28 @@ A results table covering removed, failed, review and skipped apps is printed and
 
 ## Running Directly From GitHub
 
-The script can be run straight from a GitHub repo without saving it to disk. Open an **elevated** PowerShell window (Run as Administrator), then use one of the forms below. Replace `<user>`, `<repo>` and `<branch>` with your own values; the URL must be the **raw** file URL (`raw.githubusercontent.com`), not the normal github.com page.
+The script can be run straight from the [GitHub repo](https://github.com/NeoSyntaxErro/Remove-DellBloatware) without saving it to disk. Open an **elevated** PowerShell window (Run as Administrator), then use one of the forms below.
 
 **Run with default settings:**
 
 ```powershell
-irm https://raw.githubusercontent.com/<user>/<repo>/<branch>/Remove-DellBloatware.ps1 | iex
+irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1 | iex
 ```
 
 **Run with parameters** (`iex` cannot pass parameters, so the script is turned into a scriptblock and called):
 
 ```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/<user>/<repo>/<branch>/Remove-DellBloatware.ps1))) -ListOnly
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1))) -ListOnly
+```
+
+More examples:
+
+```powershell
+# Keep Dell Command | Update and touchpad drivers, show full MSI logs
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1))) -ExcludePattern 'Command \| Update','Touchpad' -MonitorMode Full
+
+# MSI-only removal (original behavior)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1))) -SkipExe
 ```
 
 The scriptblock form is the better habit even without parameters, because it runs in its own scope and doesn't leave the script's variables and functions behind in your session.
@@ -98,7 +108,7 @@ When the script runs as a `.ps1` file it exits with a real process exit code. Wh
 
 ```powershell
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/<user>/<repo>/<branch>/Remove-DellBloatware.ps1))) -MonitorMode Quiet
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1))) -MonitorMode Quiet
 exit $LASTEXITCODE
 ```
 
@@ -106,7 +116,20 @@ exit $LASTEXITCODE
 
 Running code straight from the internet as Administrator means whoever can change that file controls every machine that runs it.
 
-- **Pin to a tag or commit for fleet use.** Use a URL like `.../<user>/<repo>/v1.2.0/Remove-DellBloatware.ps1` or `.../<user>/<repo>/<commit-sha>/Remove-DellBloatware.ps1` instead of `main`. An accidental or malicious push to `main` then can't reach your fleet, and every machine runs the exact same version. (Raw URLs on a branch are also cached for a few minutes, so a fresh push may not be picked up immediately.)
+- **Pin to a release tag for fleet use.** Create a tag for each tested version:
+
+  ```bash
+  git tag v1.0.0
+  git push origin v1.0.0
+  ```
+
+  Then point RMM jobs at the tag instead of `main`:
+
+  ```powershell
+  & ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/v1.0.0/Remove-DellBloatware.ps1))) -MonitorMode Quiet
+  ```
+
+  An accidental or malicious push to `main` then can't reach your fleet, and every machine runs the exact same version. (Raw URLs on `main` are also cached for a few minutes, so a fresh push may not be picked up immediately.)
 - **Protect the branch.** Turn on branch protection and two-factor authentication for anyone with write access to the repo.
 - **Optionally verify a hash.** For RMM jobs, check the download against a known SHA-256 before running it. The helper below hashes the downloaded text itself, so run it once against your pinned URL to get the expected value, then paste that value into the job:
 
@@ -116,7 +139,7 @@ function Get-TextSha256([string]$Text) {
     [BitConverter]::ToString([Security.Cryptography.SHA256]::Create().ComputeHash($bytes)) -replace '-'
 }
 
-$url  = 'https://raw.githubusercontent.com/<user>/<repo>/<tag>/Remove-DellBloatware.ps1'
+$url  = 'https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/v1.0.0/Remove-DellBloatware.ps1'
 $hash = '<expected SHA-256>'   # one-time: Get-TextSha256 (irm $url)
 $code = irm $url
 if ((Get-TextSha256 $code) -ne $hash) { Write-Error "Hash mismatch - not running."; exit 1 }
@@ -124,9 +147,7 @@ if ((Get-TextSha256 $code) -ne $hash) { Write-Error "Hash mismatch - not running
 exit $LASTEXITCODE
 ```
 
-  Hashing the downloaded text (rather than a local copy with `Get-FileHash`) avoids false mismatches from line-ending or BOM differences. Pinning to a tag or commit keeps the hash valid; update it whenever you move to a new version.
-
-- **Private repos** need an access token in the request: `irm $url -Headers @{ Authorization = "token <PAT>" }`. Don't embed a token in scripts; store it in your RMM's secure variables.
+  Hashing the downloaded text (rather than a local copy with `Get-FileHash`) avoids false mismatches from line-ending or BOM differences. Pinning to a tag keeps the hash valid; update it whenever you move to a new version.
 
 ## Parameters
 

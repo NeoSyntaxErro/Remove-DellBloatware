@@ -50,9 +50,11 @@
 .NOTES
     Scripted by: Steffen Teall
 
-    Run directly from GitHub (no download needed):
-      Defaults:        irm <raw-url> | iex
-      With parameters: & ([scriptblock]::Create((irm <raw-url>))) -ListOnly
+    Repo: https://github.com/NeoSyntaxErro/Remove-DellBloatware
+
+    Run directly from GitHub (elevated PowerShell, no download needed):
+      Defaults:        irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1 | iex
+      With parameters: & ([scriptblock]::Create((irm https://raw.githubusercontent.com/NeoSyntaxErro/Remove-DellBloatware/main/Remove-DellBloatware.ps1))) -ListOnly
 
     Exit codes: 0 = all removed, 1 = one or more failed / need review, 2 = no failures but some apps skipped.
 #>
